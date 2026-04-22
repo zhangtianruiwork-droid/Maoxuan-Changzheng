@@ -25,22 +25,22 @@
 
 ## 界面预览
 
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <img src="docs/screenshot-hero.png" alt="首页 · 矩阵雨动画"/>
-      <br/><sub><b>首页</b> — 多语言矩阵雨 + 3D 网格动画</sub>
-    </td>
-    <td align="center" width="33%">
-      <img src="docs/screenshot-about.png" alt="系统信息"/>
-      <br/><sub><b>系统信息</b> — 12个心智模型 · 231篇原典</sub>
-    </td>
-    <td align="center" width="33%">
-      <img src="docs/screenshot-chat.png" alt="对话终端"/>
-      <br/><sub><b>对话终端</b> — mao-xuan.terminal · 实时流式输出</sub>
-    </td>
-  </tr>
-</table>
+<div align="center">
+
+<img src="docs/screenshot-hero.png" alt="首页 · 矩阵雨动画" width="100%"/>
+<sub><b>首页</b> — 多语言矩阵雨 + 3D 网格动画</sub>
+
+<br/><br/>
+
+<img src="docs/screenshot-about.png" alt="系统信息" width="100%"/>
+<sub><b>系统信息</b> — 12个心智模型 · 231篇原典</sub>
+
+<br/><br/>
+
+<img src="docs/screenshot-chat.png" alt="对话终端" width="100%"/>
+<sub><b>对话终端</b> — mao-xuan.terminal · 实时流式输出</sub>
+
+</div>
 
 ---
 
