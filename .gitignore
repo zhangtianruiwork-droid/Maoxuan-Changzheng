@@ -1,0 +1,31 @@
+# Dependencies
+app/node_modules/
+node_modules/
+
+# Build output
+app/dist/
+dist/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Raw source archives (too large for git)
+*.zip
+MaoZeDongAnthology-master/
+maoxuan-skill-main/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
