@@ -85,11 +85,11 @@ npm run build
 
 ## 真实对话案例
 
-<sub>以下均为使用本 Skill 的真实对话记录，模型：claude-sonnet-4-6。点击标题展开查看完整对话。</sub>
+<sub>以下均为使用本 Skill 的真实对话记录，模型：claude-sonnet-4-6、deepseek V3。点击标题展开查看完整对话。</sub>
 
 ---
 
-### 解决问题类
+### 解决问题类（有精简，用claude-sonnet-4-6）
 
 <details>
 <summary><b>案例一：创业困境</b> &nbsp;·&nbsp; <sub>B2B SaaS 增长停滞半年，三个月资金告急</sub></summary>
@@ -241,7 +241,7 @@ npm run build
 
 ---
 
-### 哲学讨论类
+### 哲学讨论类（因为我觉得很精彩所以无精简，用deepseek）
 
 <details>
 <summary><b>讨论一：MBTI 与人格标签</b> &nbsp;·&nbsp; <sub>你"相信"它，还是只是"借用"它来理解自己？</sub></summary>
