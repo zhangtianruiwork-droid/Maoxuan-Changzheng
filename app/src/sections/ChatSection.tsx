@@ -25,6 +25,7 @@ const quickCommands = [
   '我的创业遇到了困境',
   '团队管理出现了严重冲突',
   '如何面对比我强大得多的对手',
+  '我毕生追求的知识在AI面前毫无价值',
 ];
 
 export function ChatSection() {
@@ -46,7 +47,7 @@ export function ChatSection() {
       ([entry]) => {
         if (entry.isIntersecting) setIsVisible(true);
       },
-      { threshold: 0.1 }
+      { threshold: 0.05 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
@@ -76,6 +77,7 @@ export function ChatSection() {
     setError(null);
     const userContent = input.trim();
     setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -95,9 +97,8 @@ export function ChatSection() {
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setIsStreaming(true);
 
-    // Build conversation history for API (exclude the initial system message and the empty assistant placeholder)
     const history = [...messages, userMessage]
-      .filter((m) => m.id !== '1') // exclude initial greeting
+      .filter((m) => m.id !== '1')
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
     try {
@@ -113,7 +114,7 @@ export function ChatSection() {
           {
             type: 'text',
             text: SYSTEM_PROMPT,
-            // @ts-expect-error cache_control is valid in the API but not yet in all TS types
+            // @ts-ignore cache_control is valid in the API
             cache_control: { type: 'ephemeral' },
           },
         ],
@@ -158,10 +159,7 @@ export function ChatSection() {
     }
   };
 
-  const handleAbort = () => {
-    abortRef.current?.();
-  };
-
+  const handleAbort = () => abortRef.current?.();
   const handleClear = () => {
     setMessages(initialMessages);
     setError(null);
@@ -173,50 +171,52 @@ export function ChatSection() {
     <section
       ref={sectionRef}
       id="chat"
-      className="relative min-h-screen flex items-center py-20 bg-black overflow-hidden"
+      className="chat-section relative min-h-screen flex items-start md:items-center py-24 md:py-20 overflow-hidden"
     >
       {/* Background */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 grid-pattern opacity-30" />
+        <div className="absolute inset-0 grid-pattern opacity-20" />
         <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-red-600/5 to-transparent" />
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto w-full px-6 md:px-12">
+      <div className="relative z-10 max-w-5xl mx-auto w-full px-4 md:px-12">
+
         {/* Header */}
         <div
-          className={`flex items-center justify-between gap-6 mb-8 transition-all duration-700 ${
+          className={`mb-6 md:mb-8 transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <div className="flex items-center gap-6">
-            <div className="h-1 w-20 bg-red-600" />
-            <div>
-              <span className="text-green-500 font-mono text-sm block mb-1">SECTION 02</span>
-              <h2 className="text-5xl md:text-6xl font-bold text-white flex items-center gap-4">
-                <Terminal className="w-10 h-10 text-red-600" />
-                对话终端
-              </h2>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4 md:gap-6">
+              <div className="h-1 w-14 md:w-20 bg-red-600 flex-shrink-0" />
+              <div>
+                <span className="text-green-500 font-mono text-xs block mb-1">SECTION 02</span>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold chat-title flex items-center gap-3 md:gap-4">
+                  <Terminal className="w-8 h-8 md:w-10 md:h-10 text-red-600 flex-shrink-0" />
+                  对话终端
+                </h2>
+              </div>
             </div>
+            <button
+              onClick={() => setShowApiInput((v) => !v)}
+              className={`self-start md:self-center flex items-center gap-2 px-4 py-2.5 border font-mono text-xs transition-colors touch-target ${
+                isConfigured
+                  ? 'border-green-600/50 text-green-500 hover:border-green-500'
+                  : 'border-red-600/50 text-red-400 hover:border-red-500 animate-pulse'
+              }`}
+            >
+              <Key className="w-3 h-3" />
+              {isConfigured ? 'API KEY ✓' : '设置 API KEY'}
+            </button>
           </div>
-          {/* API Key toggle button */}
-          <button
-            onClick={() => setShowApiInput((v) => !v)}
-            className={`flex items-center gap-2 px-4 py-2 border font-mono text-xs transition-colors ${
-              isConfigured
-                ? 'border-green-600/50 text-green-500 hover:border-green-500'
-                : 'border-red-600/50 text-red-400 hover:border-red-500 animate-pulse'
-            }`}
-          >
-            <Key className="w-3 h-3" />
-            {isConfigured ? 'API KEY ✓' : '设置 API KEY'}
-          </button>
         </div>
 
         {/* API Key input panel */}
         {showApiInput && (
-          <div className="mb-4 border border-gray-800 bg-gray-900/80 p-4 font-mono text-sm">
-            <div className="text-gray-400 mb-2 text-xs">
-              ANTHROPIC API KEY — 仅存于本地 localStorage，不会上传
+          <div className="mb-4 api-key-panel border p-4 font-mono text-sm">
+            <div className="panel-hint mb-3 text-xs">
+              支持 Anthropic (sk-ant-*) · DeepSeek (sk-*) · OpenAI — 仅存于本地 localStorage
             </div>
             <div className="flex gap-2">
               <div className="flex-1 relative">
@@ -224,19 +224,19 @@ export function ChatSection() {
                   type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => saveApiKey(e.target.value)}
-                  placeholder="sk-ant-..."
-                  className="w-full bg-black border border-gray-700 text-white px-3 py-2 focus:outline-none focus:border-red-600 text-sm font-mono"
+                  placeholder="sk-ant-... 或 sk-..."
+                  className="api-key-input w-full px-3 py-2.5 focus:outline-none text-sm font-mono"
                 />
               </div>
               <button
                 onClick={() => setShowApiKey((v) => !v)}
-                className="px-3 py-2 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+                className="px-3 py-2 panel-btn transition-colors touch-target"
               >
                 {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
               <button
                 onClick={() => setShowApiInput(false)}
-                className="px-4 py-2 bg-red-600 text-white text-xs hover:bg-red-700 transition-colors"
+                className="px-4 py-2 bg-red-600 text-white text-xs hover:bg-red-700 transition-colors touch-target"
               >
                 确认
               </button>
@@ -253,24 +253,24 @@ export function ChatSection() {
 
         {/* Terminal container */}
         <div
-          className={`border border-gray-800 bg-black/80 transition-all duration-700 delay-300 ${
+          className={`terminal-container transition-all duration-700 delay-300 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
           }`}
         >
           {/* Terminal header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/50">
+          <div className="terminal-header flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-600" />
-                <div className="w-3 h-3 rounded-full bg-yellow-600" />
-                <div className="w-3 h-3 rounded-full bg-green-600" />
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                <div className="w-3 h-3 rounded-full bg-green-500" />
               </div>
-              <span className="text-gray-500 font-mono text-xs">mao-xuan.terminal</span>
+              <span className="terminal-hint font-mono text-xs">mao-xuan.terminal</span>
             </div>
             <div className="flex items-center gap-4">
               <button
                 onClick={handleClear}
-                className="text-gray-600 hover:text-gray-400 transition-colors"
+                className="terminal-hint hover:text-red-500 transition-colors touch-target"
                 title="清空对话"
               >
                 <Trash2 className="w-4 h-4" />
@@ -283,47 +283,43 @@ export function ChatSection() {
           </div>
 
           {/* Messages area */}
-          <div className="h-[500px] overflow-y-auto p-4 space-y-4 scanlines">
+          <div className="terminal-messages h-[58vh] md:h-[600px] min-h-[360px] overflow-y-auto p-4 md:p-6 space-y-5">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`font-mono text-sm ${
-                  message.role === 'assistant' ? 'text-green-400' : 'text-white'
+                className={`font-mono text-base leading-relaxed ${
+                  message.role === 'assistant' ? 'msg-assistant' : 'msg-user'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1 opacity-50">
+                <div className="flex items-center gap-2 mb-1.5 msg-meta">
                   <span className="text-xs">
-                    [
-                    {message.timestamp.toLocaleTimeString('zh-CN', {
+                    [{message.timestamp.toLocaleTimeString('zh-CN', {
                       hour: '2-digit',
                       minute: '2-digit',
                       second: '2-digit',
-                    })}
-                    ]
+                    })}]
                   </span>
-                  <span className="text-xs">
+                  <span className="text-xs font-semibold">
                     {message.role === 'assistant' ? '毛泽东' : '同志'}
                   </span>
                 </div>
-                <div className="pl-4 border-l-2 border-gray-700">
+                <div className="pl-3 md:pl-4 msg-border-l border-l-2 leading-relaxed">
                   {message.role === 'assistant' && (
                     <span className="text-red-500 mr-2">&gt;</span>
                   )}
                   <span className="whitespace-pre-wrap">{message.content}</span>
-                  {/* Cursor for actively streaming message */}
                   {isStreaming &&
                     message.role === 'assistant' &&
                     message === messages[messages.length - 1] && (
-                      <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse align-middle" />
+                      <span className="inline-block w-2 h-[1em] bg-green-400 ml-1 animate-pulse align-middle" />
                     )}
                 </div>
               </div>
             ))}
 
-            {/* Streaming indicator when assistant message is empty */}
             {isStreaming && messages[messages.length - 1]?.content === '' && (
-              <div className="font-mono text-sm text-green-400">
-                <div className="pl-4 border-l-2 border-gray-700">
+              <div className="font-mono text-base msg-assistant">
+                <div className="pl-3 md:pl-4 msg-border-l border-l-2">
                   <span className="text-red-500 mr-2">&gt;</span>
                   <span className="animate-pulse">调查研究中...</span>
                 </div>
@@ -334,29 +330,28 @@ export function ChatSection() {
           </div>
 
           {/* Input area */}
-          <div className="border-t border-gray-800 p-4">
-            <div className="flex gap-3 items-end">
-              <span className="flex-shrink-0 text-gray-500 font-mono text-sm pb-1">&gt;</span>
+          <div className="terminal-input border-t p-3 md:p-4">
+            <div className="flex gap-2 md:gap-3 items-end">
+              <span className="flex-shrink-0 terminal-hint font-mono text-base pb-1">&gt;</span>
               <textarea
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => {
                   setInput(e.target.value);
-                  // auto-resize
                   e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={isConfigured ? '说说你的情况...' : '请先设置 API Key ↗'}
-                className="flex-1 bg-transparent text-white font-mono text-sm resize-none focus:outline-none placeholder:text-gray-600"
+                className="input-textarea flex-1 bg-transparent font-mono text-base resize-none focus:outline-none"
                 rows={1}
-                style={{ minHeight: '24px', maxHeight: '120px' }}
+                style={{ minHeight: '28px', maxHeight: '150px' }}
                 disabled={isStreaming}
               />
               {isStreaming ? (
                 <button
                   onClick={handleAbort}
-                  className="flex-shrink-0 px-4 py-2 border border-red-600/50 text-red-500 hover:bg-red-600/10 transition-colors font-mono text-xs"
+                  className="flex-shrink-0 min-w-[56px] px-3 md:px-4 py-2.5 border border-red-600/50 text-red-500 hover:bg-red-600/10 transition-colors font-mono text-xs touch-target"
                 >
                   停止
                 </button>
@@ -364,21 +359,24 @@ export function ChatSection() {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || !isConfigured}
-                  className="flex-shrink-0 px-4 py-2 bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="flex-shrink-0 w-11 h-11 md:w-auto md:h-auto md:px-4 md:py-2.5 flex items-center justify-center bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors touch-target"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               )}
             </div>
-            <div className="mt-2 text-xs text-gray-600 font-mono">
+            <div className="mt-2 text-xs terminal-hint font-mono hidden md:block">
               [Enter] 发送 · [Shift+Enter] 换行 · 模型: claude-sonnet-4-6
+            </div>
+            <div className="mt-2 text-xs terminal-hint font-mono md:hidden">
+              Enter 发送 · Shift+Enter 换行
             </div>
           </div>
         </div>
 
         {/* Quick commands */}
         <div
-          className={`mt-6 flex flex-wrap gap-3 transition-all duration-700 delay-500 ${
+          className={`mt-4 md:mt-6 flex flex-wrap gap-2 md:gap-3 transition-all duration-700 delay-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
@@ -390,7 +388,7 @@ export function ChatSection() {
                 textareaRef.current?.focus();
               }}
               disabled={isStreaming}
-              className="px-4 py-2 border border-gray-800 text-gray-400 font-mono text-sm hover:border-red-600/50 hover:text-white transition-colors disabled:opacity-40"
+              className="quick-cmd px-3 md:px-4 py-2 border font-mono text-xs md:text-sm hover:border-red-600/50 transition-colors disabled:opacity-40 touch-target"
             >
               {cmd}
             </button>

@@ -15,13 +15,73 @@
     --alert-orange: #FF6600;
     --dark-gray: #1a1a1a;
     --medium-gray: #333333;
-    
+
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
     --primary: 0 100% 50%;
     --primary-foreground: 0 0% 100%;
     --radius: 0;
+
+    /* Theme-aware tokens (dark default) */
+    --page-bg: #000000;
+    --page-text: #ffffff;
+    --nav-bg: rgba(0, 0, 0, 0.92);
+    --nav-text: #ffffff;
+    --nav-link: #9ca3af;
+    --mobile-menu-bg: #000000;
+    --section-bg: #000000;
+    --card-bg: rgba(17, 24, 39, 0.5);
+    --card-border: #1f2937;
+    --terminal-bg: rgba(0, 0, 0, 0.85);
+    --terminal-border: #1f2937;
+    --terminal-header-bg: rgba(17, 24, 39, 0.6);
+    --terminal-hint: #6b7280;
+    --msg-assistant: #4ade80;
+    --msg-user: #ffffff;
+    --msg-meta: rgba(156, 163, 175, 0.6);
+    --msg-border: #374151;
+    --input-text: #ffffff;
+    --input-placeholder: #4b5563;
+    --quick-cmd-border: #1f2937;
+    --quick-cmd-text: #9ca3af;
+    --panel-bg: rgba(17, 24, 39, 0.9);
+    --panel-border: #374151;
+    --panel-hint: #6b7280;
+    --panel-input-bg: #000000;
+    --panel-input-border: #374151;
+    --panel-btn: #6b7280;
   }
+}
+
+/* ── Light Theme Token Overrides ── */
+[data-theme="light"] {
+  --page-bg: #f5f0e8;
+  --page-text: #1a1a1a;
+  --nav-bg: rgba(245, 240, 232, 0.97);
+  --nav-text: #1a1a1a;
+  --nav-link: #555555;
+  --mobile-menu-bg: #f0ebe2;
+  --section-bg: #f5f0e8;
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: #ddd8d0;
+  --terminal-bg: rgba(255, 255, 255, 0.97);
+  --terminal-border: #d0c8c0;
+  --terminal-header-bg: rgba(240, 235, 228, 0.95);
+  --terminal-hint: #888888;
+  --msg-assistant: #1a6b1a;
+  --msg-user: #1a1a1a;
+  --msg-meta: rgba(100, 100, 100, 0.65);
+  --msg-border: #d8d0c8;
+  --input-text: #1a1a1a;
+  --input-placeholder: #aaaaaa;
+  --quick-cmd-border: #d0c8c0;
+  --quick-cmd-text: #666666;
+  --panel-bg: rgba(248, 244, 238, 0.98);
+  --panel-border: #d8d0c8;
+  --panel-hint: #888888;
+  --panel-input-bg: #ffffff;
+  --panel-input-border: #c8c0b8;
+  --panel-btn: #888888;
 }
 
 @layer base {
@@ -29,22 +89,180 @@
     @apply border-border;
     box-sizing: border-box;
   }
-  
+
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
-    @apply bg-black text-white antialiased;
+    background-color: var(--page-bg);
+    color: var(--page-text);
     font-family: 'Roboto Mono', monospace;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Oswald', sans-serif;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+}
+
+/* ── Theme-aware component classes ── */
+.theme-root {
+  background-color: var(--page-bg);
+  color: var(--page-text);
+  min-height: 100vh;
+}
+
+/* Navigation */
+.nav-bar {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.nav-scrolled {
+  background-color: var(--nav-bg);
+}
+.nav-text {
+  color: var(--nav-text);
+}
+.nav-link {
+  color: var(--nav-link);
+}
+.nav-link:hover {
+  color: var(--nav-text);
+}
+.mobile-menu-overlay {
+  background-color: var(--mobile-menu-bg);
+}
+
+/* Sections */
+.chat-section {
+  background-color: var(--section-bg);
+}
+.chat-title {
+  color: var(--page-text);
+}
+
+/* Terminal */
+.terminal-container {
+  background-color: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.terminal-header {
+  background-color: var(--terminal-header-bg);
+  border-color: var(--terminal-border);
+}
+.terminal-hint {
+  color: var(--terminal-hint);
+}
+.terminal-messages {
+  background-color: var(--terminal-bg);
+}
+.terminal-input {
+  border-color: var(--terminal-border);
+  background-color: var(--terminal-bg);
+}
+
+/* Messages */
+.msg-assistant {
+  color: var(--msg-assistant);
+}
+.msg-user {
+  color: var(--msg-user);
+}
+.msg-meta {
+  color: var(--msg-meta);
+  opacity: 1 !important;
+}
+.msg-border-l {
+  border-color: var(--msg-border);
+}
+
+/* Input */
+.input-textarea {
+  color: var(--input-text);
+}
+.input-textarea::placeholder {
+  color: var(--input-placeholder);
+}
+
+/* Quick commands */
+.quick-cmd {
+  border-color: var(--quick-cmd-border);
+  color: var(--quick-cmd-text);
+}
+.quick-cmd:hover:not(:disabled) {
+  color: var(--page-text);
+}
+
+/* API key panel */
+.api-key-panel {
+  background-color: var(--panel-bg);
+  border-color: var(--panel-border);
+}
+.panel-hint {
+  color: var(--panel-hint);
+}
+.api-key-input {
+  background-color: var(--panel-input-bg);
+  border: 1px solid var(--panel-input-border);
+  color: var(--input-text);
+}
+.api-key-input:focus {
+  border-color: #cc0000;
+}
+.panel-btn {
+  border: 1px solid var(--panel-border);
+  color: var(--panel-btn);
+}
+.panel-btn:hover {
+  color: var(--page-text);
+}
+
+/* Touch targets — min 44px for mobile */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* About / Contact section generic override */
+[data-theme="light"] section {
+  background-color: var(--section-bg);
+}
+[data-theme="light"] .bg-black {
+  background-color: var(--section-bg) !important;
+}
+[data-theme="light"] .bg-gray-900\/50,
+[data-theme="light"] .bg-gray-900\/80 {
+  background-color: var(--card-bg) !important;
+}
+[data-theme="light"] .border-gray-800,
+[data-theme="light"] .border-gray-700 {
+  border-color: var(--card-border) !important;
+}
+[data-theme="light"] .text-white {
+  color: var(--page-text) !important;
+}
+[data-theme="light"] .text-gray-400 {
+  color: #666666 !important;
+}
+[data-theme="light"] .text-gray-500 {
+  color: #888888 !important;
+}
+[data-theme="light"] .text-gray-600 {
+  color: #999999 !important;
+}
+[data-theme="light"] .text-green-500 {
+  color: #1a8a1a !important;
+}
+[data-theme="light"] .text-green-400 {
+  color: #1a6b1a !important;
 }
 
 @layer utilities {
