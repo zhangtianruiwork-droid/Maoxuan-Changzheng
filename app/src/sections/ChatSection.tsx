@@ -3,6 +3,38 @@ import { Send, Terminal, Cpu, Key, EyeOff, Eye, Trash2 } from 'lucide-react';
 import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT } from '../lib/system-prompt';
 
+// ---------------------------------------------------------------------------
+// Provider configuration
+// ---------------------------------------------------------------------------
+const PROVIDERS = [
+  {
+    id: 'anthropic',
+    label: 'Anthropic (Claude)',
+    hint: 'sk-ant-*',
+    model: 'claude-sonnet-4-6',
+    baseUrl: '',          // uses Anthropic SDK directly
+    storageKey: 'maoxuan_api_key',
+  },
+  {
+    id: 'astraflow',
+    label: 'Astraflow · 全球端点',
+    hint: 'Astraflow API Key',
+    model: 'gpt-4o',
+    baseUrl: 'https://api-us-ca.umodelverse.ai/v1',
+    storageKey: 'maoxuan_astraflow_api_key',
+  },
+  {
+    id: 'astraflow-cn',
+    label: 'Astraflow · 中国端点',
+    hint: 'Astraflow API Key',
+    model: 'gpt-4o',
+    baseUrl: 'https://api.modelverse.cn/v1',
+    storageKey: 'maoxuan_astraflow_cn_api_key',
+  },
+] as const;
+
+type ProviderId = (typeof PROVIDERS)[number]['id'];
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -10,7 +42,7 @@ interface Message {
   timestamp: Date;
 }
 
-const STORAGE_KEY = 'maoxuan_api_key';
+const STORAGE_KEY = 'maoxuan_api_key'; // kept for backward-compat (Anthropic default)
 
 const initialMessages: Message[] = [
   {
@@ -32,7 +64,9 @@ export function ChatSection() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
+  const [providerId, setProviderId] = useState<ProviderId>('anthropic');
+  const provider = PROVIDERS.find((p) => p.id === providerId)!;
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem(provider.storageKey) || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [showApiInput, setShowApiInput] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,12 +91,19 @@ export function ChatSection() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // When the user switches provider, reload the stored key for that provider
+  const handleProviderChange = (id: ProviderId) => {
+    setProviderId(id);
+    const p = PROVIDERS.find((x) => x.id === id)!;
+    setApiKey(localStorage.getItem(p.storageKey) || '');
+  };
+
   const saveApiKey = (key: string) => {
     setApiKey(key);
     if (key) {
-      localStorage.setItem(STORAGE_KEY, key);
+      localStorage.setItem(provider.storageKey, key);
     } else {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(provider.storageKey);
     }
   };
 
@@ -102,40 +143,104 @@ export function ChatSection() {
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
     try {
-      const client = new Anthropic({
-        apiKey: apiKey.trim(),
-        dangerouslyAllowBrowser: true,
-      });
+      if (provider.id === 'anthropic') {
+        // ── Anthropic SDK path ──────────────────────────────────────────────
+        const client = new Anthropic({
+          apiKey: apiKey.trim(),
+          dangerouslyAllowBrowser: true,
+        });
 
-      const stream = client.messages.stream({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        system: [
-          {
-            type: 'text',
-            text: SYSTEM_PROMPT,
-            // @ts-ignore cache_control is valid in the API
-            cache_control: { type: 'ephemeral' },
+        const stream = client.messages.stream({
+          model: provider.model,
+          max_tokens: 2048,
+          system: [
+            {
+              type: 'text',
+              text: SYSTEM_PROMPT,
+              // @ts-ignore cache_control is valid in the API
+              cache_control: { type: 'ephemeral' },
+            },
+          ],
+          messages: history,
+        });
+
+        abortRef.current = () => stream.abort();
+
+        let accumulated = '';
+        for await (const event of stream) {
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta.type === 'text_delta'
+          ) {
+            accumulated += event.delta.text;
+            const snapshot = accumulated;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, content: snapshot } : m
+              )
+            );
+          }
+        }
+      } else {
+        // ── Astraflow (OpenAI-compatible) path via fetch + SSE ──────────────
+        const abortController = new AbortController();
+        abortRef.current = () => abortController.abort();
+
+        const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
+          method: 'POST',
+          signal: abortController.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey.trim()}`,
           },
-        ],
-        messages: history,
-      });
+          body: JSON.stringify({
+            model: provider.model,
+            max_tokens: 2048,
+            stream: true,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              ...history,
+            ],
+          }),
+        });
 
-      abortRef.current = () => stream.abort();
+        if (!resp.ok) {
+          const errText = await resp.text();
+          throw new Error(`HTTP ${resp.status}: ${errText}`);
+        }
 
-      let accumulated = '';
-      for await (const event of stream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          accumulated += event.delta.text;
-          const snapshot = accumulated;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId ? { ...m, content: snapshot } : m
-            )
-          );
+        const reader = resp.body!.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            const data = trimmed.slice(5).trim();
+            if (data === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed?.choices?.[0]?.delta?.content;
+              if (typeof delta === 'string') {
+                accumulated += delta;
+                const snapshot = accumulated;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: snapshot } : m
+                  )
+                );
+              }
+            } catch {
+              // ignore malformed SSE lines
+            }
+          }
         }
       }
     } catch (err: unknown) {
@@ -215,8 +320,33 @@ export function ChatSection() {
         {/* API Key input panel */}
         {showApiInput && (
           <div className="mb-4 api-key-panel border p-4 font-mono text-sm">
-            <div className="panel-hint mb-3 text-xs">
-              支持 Anthropic (sk-ant-*) · DeepSeek (sk-*) · OpenAI — 仅存于本地 localStorage
+            <div className="panel-hint mb-3 text-xs space-y-2">
+              <div>
+                支持 Anthropic (sk-ant-*) · DeepSeek (sk-*) · OpenAI ·{' '}
+                <a
+                  href="https://astraflow.ucloud-global.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-400 hover:underline"
+                >
+                  Astraflow
+                </a>{' '}
+                — 仅存于本地 localStorage
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="opacity-60">服务商：</span>
+                <select
+                  value={providerId}
+                  onChange={(e) => handleProviderChange(e.target.value as ProviderId)}
+                  className="api-key-input px-2 py-1 text-xs font-mono focus:outline-none"
+                >
+                  {PROVIDERS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex gap-2">
               <div className="flex-1 relative">
@@ -224,7 +354,7 @@ export function ChatSection() {
                   type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => saveApiKey(e.target.value)}
-                  placeholder="sk-ant-... 或 sk-..."
+                  placeholder={provider.hint}
                   className="api-key-input w-full px-3 py-2.5 focus:outline-none text-sm font-mono"
                 />
               </div>
@@ -366,7 +496,7 @@ export function ChatSection() {
               )}
             </div>
             <div className="mt-2 text-xs terminal-hint font-mono hidden md:block">
-              [Enter] 发送 · [Shift+Enter] 换行 · 模型: claude-sonnet-4-6
+              [Enter] 发送 · [Shift+Enter] 换行 · 服务商: {provider.label} · 模型: {provider.model}
             </div>
             <div className="mt-2 text-xs terminal-hint font-mono md:hidden">
               Enter 发送 · Shift+Enter 换行
